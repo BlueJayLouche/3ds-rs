@@ -1,0 +1,1 @@
+/Users/ac/developer/rust/3ds-rs/target/debug/libds3.rlib: /Users/ac/developer/rust/3ds-rs/target/package/ds3-0.1.0/src/chunk.rs /Users/ac/developer/rust/3ds-rs/target/package/ds3-0.1.0/src/convert.rs /Users/ac/developer/rust/3ds-rs/target/package/ds3-0.1.0/src/geometry.rs /Users/ac/developer/rust/3ds-rs/target/package/ds3-0.1.0/src/lib.rs

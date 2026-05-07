@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error3ds"],"fn":["parse"],"struct":["Mesh3ds","Scene3ds"],"type":["MeshBuffers"]};
