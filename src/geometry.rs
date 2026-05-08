@@ -1,6 +1,9 @@
 use crate::chunk::Chunk;
 use crate::Error3ds;
 
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
+
 /// Read a null-terminated ASCII string starting at `offset`.
 pub(crate) fn read_cstring(data: &[u8], offset: usize) -> Result<String, Error3ds> {
     let mut end = offset;

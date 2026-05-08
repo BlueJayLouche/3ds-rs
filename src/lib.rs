@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 //! Pure-Rust parser for Autodesk 3D Studio binary (`.3ds`) files.
 //!
 //! # Quick start
@@ -16,6 +18,12 @@
 //!
 //! Some exporters write Z-up data regardless of the spec; callers that know their
 //! source is Z-up should swap Y/Z themselves after calling [`parse`].
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
 
 mod chunk;
 mod convert;

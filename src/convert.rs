@@ -1,5 +1,9 @@
 use crate::Mesh3ds;
-use std::collections::HashMap;
+
+#[cfg(not(feature = "std"))]
+use alloc::{collections::BTreeMap, vec, vec::Vec};
+#[cfg(feature = "std")]
+use std::collections::BTreeMap;
 
 /// Buffers produced by [`Mesh3ds::to_flat_buffers`] or [`Mesh3ds::to_smooth_buffers`].
 #[derive(Debug, Clone)]
@@ -111,7 +115,7 @@ pub(crate) fn to_smooth(mesh: &Mesh3ds) -> MeshBuffers {
         }
 
         // Sum area-weighted normals per component.
-        let mut sums: HashMap<usize, [f32; 3]> = HashMap::new();
+        let mut sums: BTreeMap<usize, [f32; 3]> = BTreeMap::new();
         for (idx, &(fi, _)) in refs.iter().enumerate() {
             let root = uf.find(idx);
             let n = face_normals[fi];
@@ -120,7 +124,7 @@ pub(crate) fn to_smooth(mesh: &Mesh3ds) -> MeshBuffers {
         }
 
         // Normalize and assign back.
-        let mut normalized: HashMap<usize, [f32; 3]> = HashMap::with_capacity(sums.len());
+        let mut normalized: BTreeMap<usize, [f32; 3]> = BTreeMap::new();
         for (&root, &sum) in &sums {
             normalized.insert(root, normalize(sum));
         }
@@ -139,8 +143,8 @@ pub(crate) fn to_smooth(mesh: &Mesh3ds) -> MeshBuffers {
     let mut indices = Vec::with_capacity(mesh.faces.len() * 3);
 
     // Key: (vertex_index, normal_bits)
-    // We quantize normals to f32 bit patterns for exact HashMap equality.
-    let mut seen: HashMap<(u16, [u32; 3]), u32> = HashMap::new();
+    // We quantize normals to f32 bit patterns for exact BTreeMap equality.
+    let mut seen: BTreeMap<(u16, [u32; 3]), u32> = BTreeMap::new();
 
     for (fi, &[a, b, c]) in mesh.faces.iter().enumerate() {
         for (corner, &v) in [a, b, c].iter().enumerate() {
@@ -204,10 +208,31 @@ fn len_sq(a: [f32; 3]) -> f32 {
 fn normalize(a: [f32; 3]) -> [f32; 3] {
     let l2 = len_sq(a);
     if l2 > 0.0 {
-        scale(a, 1.0 / l2.sqrt())
+        scale(a, 1.0 / fsqrt(l2))
     } else {
         [0.0, 1.0, 0.0]
     }
+}
+
+/// `f32::sqrt` is only in `std`; in `no_std` builds we use two Newton
+/// iterations which give < 1 ULP error for the values encountered here.
+#[cfg(feature = "std")]
+#[inline]
+fn fsqrt(x: f32) -> f32 {
+    x.sqrt()
+}
+
+#[cfg(not(feature = "std"))]
+#[inline]
+fn fsqrt(x: f32) -> f32 {
+    if x <= 0.0 {
+        return 0.0;
+    }
+    // IEEE 754 bit-hack initial guess, then two Newton iterations.
+    let mut r = f32::from_bits((x.to_bits() >> 1).wrapping_add(0x1fbb_3f80));
+    r = 0.5 * (r + x / r);
+    r = 0.5 * (r + x / r);
+    r
 }
 
 fn face_normal(a: [f32; 3], b: [f32; 3], c: [f32; 3]) -> [f32; 3] {
