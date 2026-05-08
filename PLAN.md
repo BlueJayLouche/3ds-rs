@@ -141,13 +141,27 @@ Addressed all reviewer findings before crates.io publish:
 - **Docs**: coord-system note de-Bevy-ified; UV-seam docstring corrected;
   `#[allow(dead_code)]` narrowed to the two actually-unused test helpers
 
-### 🔲 Phase 4 — Integration tests, fixtures, CI
+### ✅ Phase 4 — Integration tests, fixtures, CI
 
-- [ ] `tests/parse.rs` integration test file
-- [ ] `tests/fixtures/simple_cube.3ds` (checked-in, public-domain)
-- [ ] Assert expected vertex/face counts from real fixture
-- [ ] Assert flat and smooth normals are unit length on real file
-- [ ] GitHub Actions: `cargo test`, `cargo clippy`, `cargo doc --no-deps`
+- `tests/parse.rs`: four integration tests against the real fixture
+  - `parse_simple_cube` — mesh/vertex/face/UV/smooth-group/material counts
+  - `flat_buffers_unit_normals` — buffer lengths + unit-length assertion
+  - `smooth_buffers_unit_normals` — vertex sharing + unit-length assertion
+  - `smooth_shares_vertices_across_faces` — smooth < flat vertex count
+- `tests/fixtures/simple_cube.3ds` — 383-byte checked-in binary fixture
+- GitHub Actions (3 jobs, matrix stable + 1.70):
+  - **test**: `cargo test --locked --all-targets` × 2 toolchains,
+    `cargo test --locked --all-targets --features serde` × 2 toolchains
+  - **lint**: `cargo clippy --locked -- -D warnings` (default + serde),
+    `cargo doc --locked --no-deps`
+  - **publish-dry-run**: `cargo publish --locked --dry-run`
+  - `Swatinem/rust-cache@v2` on all jobs
+- Fixed latent bug: optional `serde` dep had `default-features = false`,
+  stripping std impls for `String`, `Vec<T>`, and arrays — crate silently
+  failed to compile with `--features serde` since the initial scaffold
+
+### 🔲 Phase 5 — Publish
+
 - [ ] `cargo publish` for real
 
 ---
