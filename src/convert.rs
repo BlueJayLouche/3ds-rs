@@ -2,9 +2,17 @@ use crate::Mesh3ds;
 use std::collections::HashMap;
 
 /// Buffers produced by [`Mesh3ds::to_flat_buffers`] or [`Mesh3ds::to_smooth_buffers`].
-///
-/// The tuple layout is `(positions, normals, uvs, indices)`.
-pub type MeshBuffers = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
+#[derive(Debug, Clone)]
+pub struct MeshBuffers {
+    /// Vertex positions.
+    pub positions: Vec<[f32; 3]>,
+    /// Per-vertex surface normals (unit length).
+    pub normals: Vec<[f32; 3]>,
+    /// Texture coordinates, parallel to `positions`.
+    pub uvs: Vec<[f32; 2]>,
+    /// Triangle index buffer; every 3 consecutive elements form one triangle.
+    pub indices: Vec<u32>,
+}
 
 // ── Flat shading ─────────────────────────────────────────────────────────────
 
@@ -50,7 +58,7 @@ pub(crate) fn to_flat(mesh: &Mesh3ds) -> MeshBuffers {
         indices.push(base + 2);
     }
 
-    (positions, normals, uvs, indices)
+    MeshBuffers { positions, normals, uvs, indices }
 }
 
 // ── Smooth shading ───────────────────────────────────────────────────────────
@@ -124,9 +132,10 @@ pub(crate) fn to_smooth(mesh: &Mesh3ds) -> MeshBuffers {
     }
 
     // 4. Build output mesh, deduplicating corners with identical (vertex, normal, uv).
-    let mut positions = Vec::new();
-    let mut normals = Vec::new();
-    let mut uvs = Vec::new();
+    //    Pre-size to mesh.vertices.len() as a lower-bound estimate before any seam splits.
+    let mut positions = Vec::with_capacity(mesh.vertices.len());
+    let mut normals = Vec::with_capacity(mesh.vertices.len());
+    let mut uvs = Vec::with_capacity(mesh.vertices.len());
     let mut indices = Vec::with_capacity(mesh.faces.len() * 3);
 
     // Key: (vertex_index, normal_bits)
@@ -159,7 +168,7 @@ pub(crate) fn to_smooth(mesh: &Mesh3ds) -> MeshBuffers {
         }
     }
 
-    (positions, normals, uvs, indices)
+    MeshBuffers { positions, normals, uvs, indices }
 }
 
 // ── Math helpers ─────────────────────────────────────────────────────────────

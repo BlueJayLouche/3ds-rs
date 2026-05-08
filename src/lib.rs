@@ -27,6 +27,11 @@ use geometry::*;
 // Re-export conversion helpers.
 pub use convert::MeshBuffers;
 
+/// Row-major 4×3 local-to-world transform matrix.
+///
+/// Rows 0–2 are the 3×3 rotation/scale basis; row 3 is the translation.
+pub type Mat4x3 = [[f32; 3]; 4];
+
 use thiserror::Error;
 
 /// Errors that can occur while parsing a `.3ds` file.
@@ -86,7 +91,7 @@ pub struct Mesh3ds {
     /// `0` means flat-shaded for that face.
     pub smooth_groups: Vec<u32>,
     /// Row-major 4×3 local-to-world transform. Default is identity.
-    pub transform: [[f32; 3]; 4],
+    pub transform: Mat4x3,
     /// Material name assigned to this mesh (from the first `MSH_MAT_GROUP`).
     pub material: Option<String>,
 }
@@ -412,14 +417,14 @@ mod tests {
         let data = build_cube_3ds(false);
         let scene = parse(&data).unwrap();
         let mesh = &scene.meshes[0];
-        let (pos, nrm, uv, idx) = mesh.to_flat_buffers();
-        assert_eq!(pos.len(), mesh.faces.len() * 3);
-        assert_eq!(nrm.len(), mesh.faces.len() * 3);
-        assert_eq!(uv.len(), mesh.faces.len() * 3);
-        assert_eq!(idx.len(), mesh.faces.len() * 3);
+        let buf = mesh.to_flat_buffers();
+        assert_eq!(buf.positions.len(), mesh.faces.len() * 3);
+        assert_eq!(buf.normals.len(), mesh.faces.len() * 3);
+        assert_eq!(buf.uvs.len(), mesh.faces.len() * 3);
+        assert_eq!(buf.indices.len(), mesh.faces.len() * 3);
 
         // All normals should be unit length
-        for n in &nrm {
+        for n in &buf.normals {
             let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
             assert!((len - 1.0).abs() < 1e-5, "normal length = {}", len);
         }
@@ -430,15 +435,15 @@ mod tests {
         let data = build_cube_3ds(true);
         let scene = parse(&data).unwrap();
         let mesh = &scene.meshes[0];
-        let (pos, nrm, _uv, idx) = mesh.to_smooth_buffers();
+        let buf = mesh.to_smooth_buffers();
 
         // With all faces in smooth group 1, a cube should share more vertices
         // than flat shading (which has 36 = 12*3).
-        assert!(pos.len() < 36, "smooth should share vertices, got {}", pos.len());
-        assert_eq!(idx.len(), 36);
+        assert!(buf.positions.len() < 36, "smooth should share vertices, got {}", buf.positions.len());
+        assert_eq!(buf.indices.len(), 36);
 
         // All normals should be unit length
-        for n in &nrm {
+        for n in &buf.normals {
             let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
             assert!((len - 1.0).abs() < 1e-5, "normal length = {}", len);
         }
@@ -451,7 +456,7 @@ mod tests {
         let mesh = &scene.meshes[0];
         let flat = mesh.to_flat_buffers();
         let smooth = mesh.to_smooth_buffers();
-        assert_eq!(flat.0.len(), smooth.0.len());
+        assert_eq!(flat.positions.len(), smooth.positions.len());
     }
 
     #[test]
