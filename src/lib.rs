@@ -11,8 +11,8 @@
 //! ```
 //!
 //! # Coordinate system
-//! 3DS stores vertices in right-handed Y-up (same as Bevy). No axis permutation
-//! is needed. The [`Mesh3ds::transform`] matrix is also Y-up.
+//! 3DS stores vertices in right-handed Y-up (the same convention used by glTF and Bevy). No axis
+//! permutation is needed. The [`Mesh3ds::transform`] matrix is also Y-up.
 //!
 //! Some exporters write Z-up data regardless of the spec; callers that know their
 //! source is Z-up should swap Y/Z themselves after calling [`parse`].
@@ -129,8 +129,8 @@ impl Mesh3ds {
     /// Smooth-shaded buffers: vertices shared across faces in the same smooth
     /// group. Normals are area-weighted and averaged per vertex group.
     ///
-    /// UV seams are preserved — a vertex shared across a UV seam gets duplicated
-    /// into two entries with different UVs but the same normal.
+    /// The 3DS format stores one UV per vertex, so UV seams are authored by the
+    /// source tool as distinct vertex indices; no special handling is needed here.
     ///
     /// If [`smooth_groups`](Self::smooth_groups) is empty, falls back to flat
     /// shading.
@@ -241,7 +241,6 @@ fn parse_mat_entry(data: &[u8], chunk: &Chunk) -> Result<Option<String>, Error3d
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-#[allow(dead_code)]
 mod tests {
     use super::*;
 
@@ -295,6 +294,7 @@ mod tests {
         write_chunk(0x4150, &data, buf);
     }
 
+    #[allow(dead_code)]
     fn write_mesh_matrix(mat: &[[f32; 3]; 4], buf: &mut Vec<u8>) {
         let mut data = Vec::new();
         for row in mat {
@@ -305,6 +305,7 @@ mod tests {
         write_chunk(0x4160, &data, buf);
     }
 
+    #[allow(dead_code)]
     fn write_msh_mat_group(name: &str, buf: &mut Vec<u8>) {
         let mut data = Vec::new();
         data.extend_from_slice(name.as_bytes());
