@@ -48,6 +48,16 @@ pub enum Error3ds {
         /// Claimed chunk length.
         length: u32,
     },
+    /// A walk-from offset falls past the chunk's end boundary.
+    #[error("offset {start} is past the end of chunk 0x{id:04X} (end {end})")]
+    BadOffset {
+        /// Chunk ID of the parent.
+        id: u16,
+        /// The requested start offset.
+        start: usize,
+        /// The chunk's end offset.
+        end: usize,
+    },
 }
 
 /// A complete scene read from a `.3ds` file.
@@ -198,9 +208,7 @@ fn parse_tri_object(data: &[u8], chunk: &Chunk) -> Result<Mesh3ds, Error3ds> {
         match child.id {
             0x4110 => mesh.vertices = read_point_array(data, &child)?,
             0x4120 => {
-                let (faces, flags) = read_face_array(data, &child)?;
-                mesh.faces = faces;
-                let _ = flags;
+                mesh.faces = read_face_array(data, &child)?;
             }
             0x4130 if mesh.material.is_none() => {
                 mesh.material = read_msh_mat_group_name(data, &child)?;

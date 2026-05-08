@@ -29,26 +29,20 @@ pub(crate) fn read_point_array(data: &[u8], chunk: &Chunk) -> Result<Vec<[f32; 3
 }
 
 /// Parse `FACE_ARRAY` (0x4120): count u16 + count * (3 * u16 + u16 flags).
-/// Returns (faces, face_flags).
-pub(crate) fn read_face_array(
-    data: &[u8],
-    chunk: &Chunk,
-) -> Result<(Vec<[u16; 3]>, Vec<u16>), Error3ds> {
+pub(crate) fn read_face_array(data: &[u8], chunk: &Chunk) -> Result<Vec<[u16; 3]>, Error3ds> {
     let mut offset = chunk.data_start;
     let count = read_u16(data, &mut offset)? as usize;
     let mut faces = Vec::with_capacity(count);
-    let mut flags = Vec::with_capacity(count);
 
     for _ in 0..count {
         let a = read_u16(data, &mut offset)?;
         let b = read_u16(data, &mut offset)?;
         let c = read_u16(data, &mut offset)?;
-        let f = read_u16(data, &mut offset)?;
+        let _flags = read_u16(data, &mut offset)?;
         faces.push([a, b, c]);
-        flags.push(f);
     }
 
-    Ok((faces, flags))
+    Ok(faces)
 }
 
 /// Parse `TEX_VERTS` (0x4140): count u16 + count * 2 * f32.

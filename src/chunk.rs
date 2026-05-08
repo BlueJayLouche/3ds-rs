@@ -31,6 +31,10 @@ impl Chunk {
             data[offset + 5],
         ]);
 
+        if length < 6 {
+            return Err(Error3ds::ChunkOverflow { id, offset, length });
+        }
+
         let end = offset + length as usize;
 
         Ok(Chunk {
@@ -57,35 +61,20 @@ impl<'a> Iterator for ChunkIter<'a> {
             return None;
         }
 
-        if self.cursor + 6 > self.data.len() {
-            return Some(Err(Error3ds::Truncated(self.data.len())));
-        }
+        let chunk = match Chunk::read_at(self.data, self.cursor) {
+            Ok(c) => c,
+            Err(e) => return Some(Err(e)),
+        };
 
-        let id = u16::from_le_bytes([self.data[self.cursor], self.data[self.cursor + 1]]);
-        let length = u32::from_le_bytes([
-            self.data[self.cursor + 2],
-            self.data[self.cursor + 3],
-            self.data[self.cursor + 4],
-            self.data[self.cursor + 5],
-        ]);
-
-        let end = self.cursor + length as usize;
-        if end > self.end || end > self.data.len() {
+        if chunk.end > self.end || chunk.end > self.data.len() {
             return Some(Err(Error3ds::ChunkOverflow {
-                id,
-                offset: self.cursor,
-                length,
+                id: chunk.id,
+                offset: chunk.offset,
+                length: (chunk.end - chunk.offset) as u32,
             }));
         }
 
-        let chunk = Chunk {
-            id,
-            offset: self.cursor,
-            data_start: self.cursor + 6,
-            end,
-        };
-
-        self.cursor = end;
+        self.cursor = chunk.end;
         Some(Ok(chunk))
     }
 }
@@ -105,10 +94,10 @@ pub(crate) fn walk_chunks_from<'a>(
     start: usize,
 ) -> Result<ChunkIter<'a>, Error3ds> {
     if start > parent.end {
-        return Err(Error3ds::ChunkOverflow {
+        return Err(Error3ds::BadOffset {
             id: parent.id,
-            offset: parent.offset,
-            length: (parent.end - parent.offset) as u32,
+            start,
+            end: parent.end,
         });
     }
 
